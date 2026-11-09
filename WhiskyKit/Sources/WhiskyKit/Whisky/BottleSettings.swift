@@ -90,7 +90,7 @@ public enum EnhancedSync: Codable, Equatable {
 }
 
 public struct BottleWineConfig: Codable, Equatable {
-    static let defaultWineVersion = SemanticVersion(7, 7, 0)
+    static let defaultWineVersion = WhiskyWineInstaller.supportedRuntimeVersion
     var wineVersion: SemanticVersion = Self.defaultWineVersion
     var windowsVersion: WinVersion = .win10
     var enhancedSync: EnhancedSync = .msync

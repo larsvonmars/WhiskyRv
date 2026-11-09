@@ -19,7 +19,9 @@
 import Foundation
 
 public extension Bundle {
-    static var whiskyBundleIdentifier: String {
-        return Bundle.main.bundleIdentifier ?? "com.isaacmarovitz.Whisky"
-    }
+    /// Bundle identifier of this fork. Also used to derive the paths of bottles, the Wine runtime and logs.
+    static let whiskyBundleIdentifier = "de.larsvonmars.WhiskyRv"
+
+    /// Bundle identifier of upstream Whisky. Used to migrate existing data once.
+    static let legacyWhiskyBundleIdentifier = "com.isaacmarovitz.Whisky"
 }

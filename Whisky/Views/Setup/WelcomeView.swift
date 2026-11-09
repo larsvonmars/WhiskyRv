@@ -114,7 +114,7 @@ struct InstallStatusView: View {
             Group {
                 if let installed = isInstalled {
                     Circle()
-                        .foregroundColor(installed ? .green : .red)
+                        .foregroundStyle(installed ? Color.green : Color.red)
                 } else {
                     ProgressView()
                         .controlSize(.small)

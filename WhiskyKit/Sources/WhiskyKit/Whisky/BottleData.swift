@@ -20,10 +20,22 @@ import Foundation
 import SemanticVersion
 
 public struct BottleData: Codable {
-    public static let containerDir = FileManager.default.homeDirectoryForCurrentUser
-        .appending(path: "Library")
-        .appending(path: "Containers")
-        .appending(path: Bundle.whiskyBundleIdentifier)
+    /// The folder that contains all bottles.
+    ///
+    /// Bottles created by upstream Whisky stay in its container: macOS does not allow one application to
+    /// rename the container of another application, so they cannot be moved to the container of this fork.
+    public static let containerDir: URL = {
+        let containers = FileManager.default.homeDirectoryForCurrentUser
+            .appending(path: "Library")
+            .appending(path: "Containers")
+        let legacyContainer = containers.appending(path: Bundle.legacyWhiskyBundleIdentifier)
+
+        if FileManager.default.fileExists(atPath: legacyContainer.path(percentEncoded: false)) {
+            return legacyContainer
+        }
+
+        return containers.appending(path: Bundle.whiskyBundleIdentifier)
+    }()
 
     public static let bottleEntriesDir = containerDir
         .appending(path: "BottleVM")

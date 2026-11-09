@@ -23,14 +23,31 @@ public class Rosetta2 {
     private static let rosetta2RuntimeBin = "/Library/Apple/usr/libexec/oah/libRosettaRuntime"
 
     public static let isRosettaInstalled: Bool = {
-        return FileManager.default.fileExists(atPath: rosetta2RuntimeBin)
+        if FileManager.default.fileExists(atPath: rosetta2RuntimeBin) {
+            return true
+        }
+
+        // The runtime layout changed between macOS releases, so fall back to translating a tiny process.
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/arch")
+        process.arguments = ["-x86_64", "/usr/bin/true"]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+            return process.terminationStatus == 0
+        } catch {
+            return false
+        }
     }()
 
     public static func installRosetta() async throws -> Bool {
         let process = Process()
         let fileHandle = try Wine.makeFileHandle()
 
-        process.launchPath = "/usr/sbin/softwareupdate"
+        process.executableURL = URL(fileURLWithPath: "/usr/sbin/softwareupdate")
         process.arguments = ["--install-rosetta", "--agree-to-license"]
         process.standardOutput = fileHandle
         process.standardError = fileHandle

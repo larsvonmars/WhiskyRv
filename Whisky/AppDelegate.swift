@@ -35,7 +35,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         if !hasShownMoveToApplicationsAlert && !AppDelegate.insideAppsFolder {
             DispatchQueue.main.asyncAfter(deadline: .now()) {
-                NSApp.activate(ignoringOtherApps: true)
+                NSApp.activate()
                 self.showAlertOnFirstLaunch()
                 self.hasShownMoveToApplicationsAlert = true
             }

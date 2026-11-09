@@ -159,7 +159,7 @@ struct ProgramItemView: View {
                     .contentTransition(.symbolEffect(.replace))
             }
             .buttonStyle(.plain)
-            .foregroundColor(program.pinned ? .accentColor : .secondary)
+            .foregroundStyle(program.pinned ? Color.accentColor : Color.secondary)
             .opacity(program.pinned ? 1 : showButtons ? 1 : 0)
             Text(program.name)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -214,7 +214,7 @@ struct BlocklistItemView: View {
                 .labelStyle(.iconOnly)
                 .symbolVariant(.fill.circle)
                 .buttonStyle(.plain)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .help("program.remove.blocklist")
             }
         }

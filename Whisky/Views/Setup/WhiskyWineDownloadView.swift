@@ -17,18 +17,15 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 import WhiskyKit
 
 struct WhiskyWineDownloadView: View {
-    @State private var fractionProgress: Double = 0
-    @State private var completedBytes: Int64 = 0
-    @State private var totalBytes: Int64 = 0
-    @State private var downloadSpeed: Double = 0
-    @State private var downloadTask: URLSessionDownloadTask?
-    @State private var observation: NSKeyValueObservation?
-    @State private var startTime: Date?
-    @Binding var tarLocation: URL
+    @StateObject private var downloader = RuntimeDownloader()
+    @State private var errorMessage: String?
+    @State private var isDownloading: Bool = false
     @Binding var path: [SetupStage]
+
     var body: some View {
         VStack {
             VStack {
@@ -39,61 +36,90 @@ struct WhiskyWineDownloadView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 Spacer()
-                VStack {
-                    ProgressView(value: fractionProgress, total: 1)
-                    HStack {
-                        HStack {
+                if let errorMessage {
+                    VStack(spacing: 8) {
+                        Image(systemName: "xmark.circle")
+                            .resizable()
+                            .foregroundStyle(.red)
+                            .frame(width: 60, height: 60)
+                        Text("setup.whiskywine.error")
+                            .font(.subheadline)
+                        Text(errorMessage)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                } else {
+                    VStack {
+                        ProgressView(value: downloader.progress, total: 1)
+                        HStack(spacing: 4) {
+                            Text(downloader.componentName)
                             Text(String(format: String(localized: "setup.whiskywine.progress"),
-                                        formatBytes(bytes: completedBytes),
-                                        formatBytes(bytes: totalBytes)))
-                            + Text(String(" "))
-                            + (shouldShowEstimate() ?
-                               Text(String(format: String(localized: "setup.whiskywine.eta"),
-                                           formatRemainingTime(remainingBytes: totalBytes - completedBytes)))
-                               : Text(String()))
+                                        formatBytes(bytes: downloader.receivedBytes),
+                                        formatBytes(bytes: downloader.expectedBytes)))
+                            if let remainingTime = remainingTime() {
+                                Text(String(format: String(localized: "setup.whiskywine.eta"), remainingTime))
+                            }
                             Spacer()
                         }
                         .font(.subheadline)
                         .monospacedDigit()
                     }
+                    .padding(.horizontal)
                 }
-                .padding(.horizontal)
                 Spacer()
             }
             Spacer()
-        }
-        .frame(width: 400, height: 200)
-        .onAppear {
-            Task {
-                if let url: URL = URL(string: "https://data.getwhisky.app/Wine/Libraries.tar.gz") {
-                    downloadTask = URLSession(configuration: .ephemeral).downloadTask(with: url) { url, _, _ in
-                        Task.detached {
-                            await MainActor.run {
-                                if let url = url {
-                                    tarLocation = url
-                                    proceed()
-                                }
-                            }
-                        }
+            HStack {
+                if errorMessage != nil {
+                    Button("setup.quit") {
+                        exit(0)
                     }
-                    observation = downloadTask?.observe(\.countOfBytesReceived) { task, _ in
+                    .keyboardShortcut(.cancelAction)
+                    Spacer()
+                    Button("setup.whiskywine.import") {
+                        importArchive()
+                    }
+                    Button("setup.retry") {
                         Task {
-                            await MainActor.run {
-                                let currentTime = Date()
-                                let elapsedTime = currentTime.timeIntervalSince(startTime ?? currentTime)
-                                if completedBytes > 0 {
-                                    downloadSpeed = Double(completedBytes) / elapsedTime
-                                }
-                                totalBytes = task.countOfBytesExpectedToReceive
-                                completedBytes = task.countOfBytesReceived
-                                fractionProgress = Double(completedBytes) / Double(totalBytes)
-                            }
+                            await startDownload()
                         }
                     }
-                    startTime = Date()
-                    downloadTask?.resume()
+                    .keyboardShortcut(.defaultAction)
                 }
             }
+        }
+        .frame(width: 400, height: 200)
+        .task {
+            await startDownload()
+        }
+    }
+
+    func startDownload() async {
+        guard !isDownloading else { return }
+
+        isDownloading = true
+        errorMessage = nil
+
+        do {
+            let plan = try await downloader.downloadAll()
+            isDownloading = false
+            path.append(.whiskyWineInstall(plan))
+        } catch {
+            isDownloading = false
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func importArchive() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.archive, .gzip, UTType(filenameExtension: "xz") ?? .archive]
+
+        if panel.runModal() == .OK, let url = panel.urls.first {
+            path.append(.whiskyWineInstall(.archive(url)))
         }
     }
 
@@ -104,25 +130,19 @@ struct WhiskyWineDownloadView: View {
         return formatter.string(fromByteCount: bytes)
     }
 
-    func shouldShowEstimate() -> Bool {
-        let elapsedTime = Date().timeIntervalSince(startTime ?? Date())
-        return Int(elapsedTime.rounded()) > 5 && completedBytes != 0
-    }
+    func remainingTime() -> String? {
+        let elapsedTime = Date().timeIntervalSince(downloader.startedAt)
+        let receivedBytes = downloader.receivedBytes
+        let remainingBytes = downloader.expectedBytes - receivedBytes
 
-    func formatRemainingTime(remainingBytes: Int64) -> String {
-        let remainingTimeInSeconds = Double(remainingBytes) / downloadSpeed
+        guard Int(elapsedTime.rounded()) > 5, receivedBytes > 0, remainingBytes > 0 else {
+            return nil
+        }
 
+        let remainingTimeInSeconds = Double(remainingBytes) / (Double(receivedBytes) / elapsedTime)
         let formatter = DateComponentsFormatter()
         formatter.allowedUnits = [.hour, .minute, .second]
         formatter.unitsStyle = .full
-        if shouldShowEstimate() {
-            return formatter.string(from: TimeInterval(remainingTimeInSeconds)) ?? ""
-        } else {
-            return ""
-        }
-    }
-
-    func proceed() {
-        path.append(.whiskyWineInstall)
+        return formatter.string(from: TimeInterval(remainingTimeInSeconds))
     }
 }

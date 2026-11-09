@@ -17,16 +17,16 @@
 //
 
 import SwiftUI
+import WhiskyKit
 
-enum SetupStage {
+enum SetupStage: Hashable {
     case rosetta
     case whiskyWineDownload
-    case whiskyWineInstall
+    case whiskyWineInstall(RuntimeInstallPlan)
 }
 
 struct SetupView: View {
     @State private var path: [SetupStage] = []
-    @State var tarLocation: URL = URL(fileURLWithPath: "")
     @Binding var showSetup: Bool
     var firstTime: Bool = true
 
@@ -40,9 +40,9 @@ struct SetupView: View {
                         case .rosetta:
                             RosettaView(path: $path, showSetup: $showSetup)
                         case .whiskyWineDownload:
-                            WhiskyWineDownloadView(tarLocation: $tarLocation, path: $path)
-                        case .whiskyWineInstall:
-                            WhiskyWineInstallView(tarLocation: $tarLocation, path: $path, showSetup: $showSetup)
+                            WhiskyWineDownloadView(path: $path)
+                        case .whiskyWineInstall(let plan):
+                            WhiskyWineInstallView(plan: plan, path: $path, showSetup: $showSetup)
                         }
                     }
             }

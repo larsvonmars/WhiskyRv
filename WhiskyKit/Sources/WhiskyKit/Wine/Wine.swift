@@ -22,8 +22,8 @@ import os.log
 public class Wine {
     /// URL to the installed `DXVK` folder
     private static let dxvkFolder: URL = WhiskyWineInstaller.libraryFolder.appending(path: "DXVK")
-    /// Path to the `wine64` binary
-    public static let wineBinary: URL = WhiskyWineInstaller.binFolder.appending(path: "wine64")
+    /// Path to the `wine` binary, either `wine64` for legacy runtimes or `wine` for WoW64 capable ones
+    public static var wineBinary: URL { WhiskyWineInstaller.wineExecutableURL }
     /// Parth to the `wineserver` binary
     private static let wineserverBinary: URL = WhiskyWineInstaller.binFolder.appending(path: "wineserver")
 
@@ -124,19 +124,20 @@ public class Wine {
     }
 
     public static func generateTerminalEnvironmentCommand(bottle: Bottle) -> String {
+        let wine = WhiskyWineInstaller.wineExecutableName
         var cmd = """
         export PATH=\"\(WhiskyWineInstaller.binFolder.path):$PATH\"
-        export WINE=\"wine64\"
-        alias wine=\"wine64\"
-        alias winecfg=\"wine64 winecfg\"
-        alias msiexec=\"wine64 msiexec\"
-        alias regedit=\"wine64 regedit\"
-        alias regsvr32=\"wine64 regsvr32\"
-        alias wineboot=\"wine64 wineboot\"
-        alias wineconsole=\"wine64 wineconsole\"
-        alias winedbg=\"wine64 winedbg\"
-        alias winefile=\"wine64 winefile\"
-        alias winepath=\"wine64 winepath\"
+        export WINE=\"\(wine)\"
+        alias wine=\"\(wine)\"
+        alias winecfg=\"\(wine) winecfg\"
+        alias msiexec=\"\(wine) msiexec\"
+        alias regedit=\"\(wine) regedit\"
+        alias regsvr32=\"\(wine) regsvr32\"
+        alias wineboot=\"\(wine) wineboot\"
+        alias wineconsole=\"\(wine) wineconsole\"
+        alias winedbg=\"\(wine) winedbg\"
+        alias winefile=\"\(wine) winefile\"
+        alias winepath=\"\(wine) winepath\"
         """
 
         let env = constructWineEnvironment(for: bottle, environment: constructWineEnvironment(for: bottle))
@@ -210,7 +211,9 @@ public class Wine {
 
     public static func killBottle(bottle: Bottle) throws {
         Task.detached(priority: .userInitiated) {
-            try await runWineserver(["-k"], bottle: bottle)
+            do { _ = try await runWineserver(["-k"], bottle: bottle) } catch {
+                Logger.wineKit.error("Failed to kill bottle: \(error)")
+            }
         }
     }
 
@@ -276,8 +279,7 @@ extension Wine {
             try FileManager.default.createDirectory(at: Self.logsFolder, withIntermediateDirectories: true)
         }
 
-        let dateString = Date.now.ISO8601Format()
-        let fileURL = Self.logsFolder.appending(path: dateString).appendingPathExtension("log")
+        let fileURL = Self.logsFolder.appending(path: Date.now.ISO8601Format()).appendingPathExtension("log")
         try "".write(to: fileURL, atomically: true, encoding: .utf8)
         return try FileHandle(forWritingTo: fileURL)
     }

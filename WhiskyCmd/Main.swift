@@ -37,6 +37,17 @@ struct Whisky: ParsableCommand {
                       Shellenv.self
                       /*Install.self,
                       Uninstall.self*/])
+
+    static func main() {
+        LegacyDataMigration.migrateIfNeeded()
+
+        do {
+            var command = try parseAsRoot()
+            try command.run()
+        } catch {
+            exit(withError: error)
+        }
+    }
 }
 
 extension Whisky {

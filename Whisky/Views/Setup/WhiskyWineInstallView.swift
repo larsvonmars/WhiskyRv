@@ -20,10 +20,11 @@ import SwiftUI
 import WhiskyKit
 
 struct WhiskyWineInstallView: View {
-    @State var installing: Bool = true
-    @Binding var tarLocation: URL
+    let plan: RuntimeInstallPlan
     @Binding var path: [SetupStage]
     @Binding var showSetup: Bool
+    @State private var isInstalling: Bool = true
+    @State private var errorMessage: String?
 
     var body: some View {
         VStack {
@@ -35,7 +36,20 @@ struct WhiskyWineInstallView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 Spacer()
-                if installing {
+                if let errorMessage {
+                    VStack(spacing: 8) {
+                        Image(systemName: "xmark.circle")
+                            .resizable()
+                            .foregroundStyle(.red)
+                            .frame(width: 60, height: 60)
+                        Text("setup.whiskywine.error")
+                            .font(.subheadline)
+                        Text(errorMessage)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                } else if isInstalling {
                     ProgressView()
                         .progressViewStyle(.circular)
                         .frame(width: 80)
@@ -48,22 +62,49 @@ struct WhiskyWineInstallView: View {
                 Spacer()
             }
             Spacer()
+            HStack {
+                if errorMessage != nil {
+                    Button("button.back") {
+                        path.removeLast()
+                    }
+                    .keyboardShortcut(.cancelAction)
+                    Spacer()
+                    Button("setup.retry") {
+                        Task {
+                            await install()
+                        }
+                    }
+                    .keyboardShortcut(.defaultAction)
+                }
+            }
         }
         .frame(width: 400, height: 200)
-        .onAppear {
-            Task.detached {
-                await WhiskyWineInstaller.install(from: tarLocation)
-                await MainActor.run {
-                    installing = false
-                }
-                sleep(2)
-                await proceed()
-            }
+        .task {
+            await install()
         }
     }
 
-    @MainActor
-    func proceed() {
-        showSetup = false
+    func install() async {
+        isInstalling = true
+        errorMessage = nil
+
+        do {
+            try await Task.detached(priority: .userInitiated) {
+                switch plan {
+                case .components(let wine, let dxvk, let temporaryDirectory):
+                    try WhiskyWineInstaller.install(wineArchive: wine, dxvkArchive: dxvk)
+                    try? FileManager.default.removeItem(at: temporaryDirectory)
+                case .archive(let archive):
+                    try WhiskyWineInstaller.install(from: archive)
+                }
+            }.value
+
+            isInstalling = false
+            try? await Task.sleep(for: .seconds(2))
+            showSetup = false
+        } catch {
+            isInstalling = false
+            errorMessage = error.localizedDescription
+        }
     }
 }

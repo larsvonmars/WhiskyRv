@@ -273,6 +273,22 @@
         }
       }
     },
+    "button.back" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurück"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back"
+          }
+        }
+      }
+    },
     "button.cDrive" : {
       "localizations" : {
         "ar" : {
@@ -14558,6 +14574,38 @@
         }
       }
     },
+    "settings.runtime.version" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installierte Version"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installed version"
+          }
+        }
+      }
+    },
+    "settings.runtime" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wine-Laufzeit"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wine Runtime"
+          }
+        }
+      }
+    },
     "settings.toggle.kill.on.terminate" : {
       "localizations" : {
         "ar" : {
@@ -17414,6 +17462,22 @@
         }
       }
     },
+    "setup.whiskywine.error" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Wine-Laufzeit konnte nicht geladen oder installiert werden:"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Wine runtime could not be downloaded or installed:"
+          }
+        }
+      }
+    },
     "setup.whiskywine.eta" : {
       "localizations" : {
         "ar" : {
@@ -17546,6 +17610,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "- 剩餘%@"
+          }
+        }
+      }
+    },
+    "setup.whiskywine.import" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus Datei installieren…"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install from File…"
           }
         }
       }

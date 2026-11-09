@@ -42,24 +42,41 @@ public class Tar {
         }
     }
 
+    /// Extracts `tarBall` into `toURL`.
+    ///
+    /// Compression is detected automatically by `tar` itself, so `gzip`, `bzip2`, `xz` and `zstd` archives
+    /// are all supported.
     public static func untar(tarBall: URL, toURL: URL) throws {
         let process = Process()
         let pipe = Pipe()
 
         process.executableURL = tarBinary
-        process.arguments = ["-xzf", "\(tarBall.path)", "-C", "\(toURL.path)"]
+        process.arguments = ["-xf", "\(tarBall.path)", "-C", "\(toURL.path)"]
         process.standardOutput = pipe
         process.standardError = pipe
 
         try process.run()
 
-        if let output = try pipe.fileHandleForReading.readToEnd() {
-            let outputString = String(data: output, encoding: .utf8) ?? String()
-            process.waitUntilExit()
-            let status = process.terminationStatus
-            if status != 0 {
-                throw outputString
-            }
+        let output = try pipe.fileHandleForReading.readToEnd()
+        process.waitUntilExit()
+
+        if process.terminationStatus != 0 {
+            let outputString = output.flatMap { String(data: $0, encoding: .utf8) } ?? String()
+            throw TarError.extractionFailed(tarBall.lastPathComponent, outputString)
+        }
+    }
+}
+
+public enum TarError: LocalizedError {
+    case extractionFailed(String, String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .extractionFailed(let archive, let output):
+            let detail = output.trimmingCharacters(in: .whitespacesAndNewlines)
+            return detail.isEmpty
+                ? "Failed to extract \(archive)."
+                : "Failed to extract \(archive): \(detail)"
         }
     }
 }

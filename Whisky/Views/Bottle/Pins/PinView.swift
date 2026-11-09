@@ -56,7 +56,7 @@ struct PinView: View {
                 Spacer()
                 Image(systemName: "play.fill")
                     .resizable()
-                    .foregroundColor(.green)
+                    .foregroundStyle(.green)
                     .frame(width: 16, height: 16)
             }
             .frame(width: 45, height: 45)
